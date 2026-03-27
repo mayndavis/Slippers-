@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Slippers app.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique identifier."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "gender": {
+          "type": "string",
+          "description": "The user's gender."
+        },
+        "dateOfBirth": {
+          "type": "timestamp",
+          "description": "The user's date of birth."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "interests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The user's selected interests."
+        },
+        "selectedAvatar": {
+          "type": "string",
+          "description": "The user's chosen avatar identifier."
+        },
+        "lastLoginDate": {
+          "type": "timestamp",
+          "description": "Timestamp of the most recent session."
+        },
+        "birthdayStatus": {
+          "type": "string",
+          "description": "Current state (e.g., 'waiting', 'celebrating', 'passed')."
+        },
+        "notificationPreference": {
+          "type": "boolean",
+          "description": "Opt-in status for push/email."
+        },
+        "deviceInstallStatus": {
+          "type": "boolean",
+          "description": "Whether the PWA is installed."
+        },
+        "onboardingComplete": {
+          "type": "boolean",
+          "description": "Whether the user has completed the onboarding flow."
+        }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles."
+    }
+  }
+}

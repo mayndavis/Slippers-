@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches auth.uid)
+    // Fields:
+    //   - uid: string (required) - User's unique identifier
+    //   - email: string (required) - User's email address
+    //   - name: string (optional) - User's full name
+    //   - gender: string (optional) - User's gender
+    //   - dateOfBirth: timestamp (optional) - User's date of birth
+    //   - interests: list (optional) - User's selected interests
+    //   - selectedAvatar: string (optional) - User's chosen avatar identifier
+    //   - lastLoginDate: timestamp (optional) - Timestamp of the most recent session
+    //   - birthdayStatus: string (optional) - Current state ('waiting', 'celebrating', 'passed')
+    //   - notificationPreference: boolean (optional) - Opt-in status for push/email
+    //   - deviceInstallStatus: boolean (optional) - Whether the PWA is installed
+    //   - onboardingComplete: boolean (optional) - Whether the user has completed onboarding
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalList(field, maxSize) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is list && request.resource.data[field].size() <= maxSize);
+    }
+
+    function isValidOptionalTimestamp(field) {
+      return !(field in request.resource.data) || request.resource.data[field] is timestamp;
+    }
+
+    function isValidOptionalBoolean(field) {
+      return !(field in request.resource.data) || request.resource.data[field] is bool;
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             isValidOptionalString('name', 1, 100) &&
+             isValidOptionalString('gender', 1, 20) &&
+             isValidOptionalTimestamp('dateOfBirth') &&
+             isValidOptionalList('interests', 50) &&
+             isValidOptionalString('selectedAvatar', 1, 100) &&
+             isValidOptionalTimestamp('lastLoginDate') &&
+             isValidOptionalString('birthdayStatus', 1, 20) &&
+             isValidOptionalBoolean('notificationPreference') &&
+             isValidOptionalBoolean('deviceInstallStatus') &&
+             isValidOptionalBoolean('onboardingComplete');
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged();
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+  }
+}
